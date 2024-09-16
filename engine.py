@@ -11,7 +11,7 @@ import cv2
 import torch
 import torchvision.transforms as T
 
-def inpaint(pipe, prompts, init_images, mask_images=None, latents=None, strength=0.75, guidance_scale=7.5, generator=None, 
+def inpaint(pipe, prompts, init_images, mask_images=None, latents=None, strength=0.75, guidance_scale=7.5, generator=None,
 	num_samples=1, n_iter=1):
     all_images = []
     transform = T.PILToTensor()
@@ -21,33 +21,39 @@ def inpaint(pipe, prompts, init_images, mask_images=None, latents=None, strength
                 prompt=prompts,
                 image=init_images,
                 mask_image=mask_images,
+                strength=strength,
+                guidance_scale=guidance_scale,
                 generator=generator,
             ).images
     for i in range(len(images)):
         all_images.append(transform(images[i]).unsqueeze(0))
-    
+
     return torch.cat(all_images, dim=0)
 
-def init_diffusion_engine(model_path, device):
+def init_diffusion_engine(model_path="stabilityai/stable-diffusion-2-inpainting", device="cuda", token=None):
     print('Initializing diffusion model: ', model_path)
     pipe = StableDiffusionInpaintPipeline.from_pretrained(
         model_path,
-        revision="fp16", 
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16,
+        use_auth_token=token  # Add Hugging Face token here
     ).to(device)
 
     pipe.set_progress_bar_config(disable=True)
     generator = torch.Generator(device=device).manual_seed(0)
     return pipe, generator
 
-def generate(init_images, mask_images, pipe, generator, prompt=['lion'], device='cuda', strength=0.75, 
+def generate(init_images, mask_images, pipe, generator, prompt=['lion'], device='cuda', strength=0.75,
     guidance_scale=7.5, num_samples=1, n_iter=1):
 
     img_size = 512
     transform = T.Resize(img_size)
     init_images, mask_images = transform(init_images), transform(mask_images)
-    
+
     mask_images = mask_images[:,0,:,:].unsqueeze(1)
     results = inpaint(pipe, [prompt]*mask_images.shape[0], init_images, mask_images, strength=strength, guidance_scale=guidance_scale, generator=generator, num_samples=num_samples, n_iter=n_iter)
 
     return results
+
+# Usage
+token = "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"
+pipe, generator = init_diffusion_engine(token=token)
