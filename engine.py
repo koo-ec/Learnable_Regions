@@ -55,5 +55,5 @@ def generate(init_images, mask_images, pipe, generator, prompt=['lion'], device=
     return results
 
 # Usage
-token = "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"
+token = 'Your Token'
 pipe, generator = init_diffusion_engine(token=token)
